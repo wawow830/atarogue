@@ -51,8 +51,7 @@ pi --no-session \
    --no-extensions \
    --no-skills \
    --no-prompt-templates \
-   --system-prompt "$(cat worker-prompt.txt)" \
-   -p "@kb/AGENTS.md @kb/KNOWLEDGE_BASE.md $MISSION"
+   -p @/tmp/worker-prompt-<ticket-id>.txt
 ```
 
 ### Research worker
@@ -62,8 +61,7 @@ pi --no-session \
    --no-skills \
    --no-prompt-templates \
    -e <path-to-web-search-extension> \
-   --system-prompt "$(cat worker-prompt.txt)" \
-   -p "@kb/AGENTS.md @kb/KNOWLEDGE_BASE.md $MISSION"
+   -p @/tmp/worker-prompt-<ticket-id>.txt
 ```
 
 If no web search extension is found, use `bash` to run `curl` or `python` for light web scraping, or ask the user to install one.
@@ -74,8 +72,7 @@ pi --no-session \
    --no-context-files \
    --no-prompt-templates \
    -e <path-to-todo-tracker-extension> \
-   --system-prompt "$(cat worker-prompt.txt)" \
-   -p "@kb/AGENTS.md @kb/KNOWLEDGE_BASE.md $MISSION"
+   -p @/tmp/worker-prompt-<ticket-id>.txt
 ```
 
 ### Custom worker
@@ -89,11 +86,33 @@ Read from `.pi/rts-profiles/<profile>.json` or similar:
 }
 ```
 
+## Worker prompt file
+
+The worker prompt file must be a single text file passed to `-p @/tmp/worker-prompt-<ticket-id>.txt`. It should contain:
+
+1. **Worker rules** from [WORKER.md](WORKER.md)
+2. **Knowledge base** — read `kb/AGENTS.md` and `kb/KNOWLEDGE_BASE.md` and embed their contents inline
+3. **Mission** — the one-line mission description
+
+Example structure:
+
+```
+--- WORKER RULES ---
+(your rules here)
+
+--- KNOWLEDGE BASE ---
+(project conventions here)
+
+--- MISSION ---
+Integrate ball and paddle into main.lua
+```
+
 ## Spawn procedure
 
 1. **Classify the ticket** using the decision tree above.
 2. **Build the spawn command** with the matching profile.
-3. **Write the worker prompt** to a temp file. Include the ticket id, mission, and [WORKER.md](WORKER.md) rules.
+3. **Write the worker prompt file** to `/tmp/worker-prompt-<ticket-id>.txt`.
+   - Include worker rules, knowledge base content, and mission.
 4. **Create the worktree.**
    - `herdr worktree create --cwd <repo-root> --branch <branch>`
    - If exists: `herdr worktree open --cwd <repo-root> --branch <branch>`
@@ -112,3 +131,4 @@ Read from `.pi/rts-profiles/<profile>.json` or similar:
 - Do not ask the user clarifying questions during the worker mission; bake assumptions into the prompt.
 - Do not load the orchestrator's soul or extensions onto workers.
 - Do not auto-discover all global extensions. Only load what the profile explicitly requires.
+- Do not pass multiple files to `-p`. Build a single prompt file.
