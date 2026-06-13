@@ -1,5 +1,19 @@
 local Ball = require("src.ball")
 local Paddle = require("src.paddle")
+local GameOver = require("src.gameover")
+
+function resetGame()
+    local screenWidth = love.graphics.getWidth()
+    local screenHeight = love.graphics.getHeight()
+
+    paddle = Paddle.new(screenWidth / 2 - 40, screenHeight - 40)
+    ball = Ball.new(screenWidth / 2, screenHeight - 60)
+    ball.vx = 200
+    ball.vy = -250
+    score = 0
+    lives = 3
+    gameState = "playing"
+end
 
 function love.load()
     -- Atarogue: a roguelike Atari Breakout
@@ -8,13 +22,8 @@ function love.load()
     local screenWidth = love.graphics.getWidth()
     local screenHeight = love.graphics.getHeight()
 
-    paddle = Paddle.new(screenWidth / 2 - 40, screenHeight - 40)
-    ball = Ball.new(screenWidth / 2, screenHeight - 60)
-    ball.vx = 200
-    ball.vy = -250
-    -- BROWNFIELD: messy globals, no state table
-    score = 0
-    lives = 3
+    gameOverScreen = GameOver.new(screenWidth, screenHeight)
+    resetGame()
     -- TODO: powerup system
     -- TODO: brick system
     -- TODO: level progression
@@ -22,6 +31,10 @@ function love.load()
 end
 
 function love.update(dt)
+    if gameState ~= "playing" then
+        return
+    end
+
     ball:update(dt)
     paddle:update(dt)
 
@@ -49,12 +62,15 @@ function love.update(dt)
     end
 
     if ball.y - 8 > screenHeight then
-        ball.x = screenWidth / 2
-        ball.y = screenHeight - 60
-        ball.vx = 200
-        ball.vy = -250
         lives = lives - 1
-        -- TODO: game over screen
+        if lives <= 0 then
+            gameState = "gameover"
+        else
+            ball.x = screenWidth / 2
+            ball.y = screenHeight - 60
+            ball.vx = 200
+            ball.vy = -250
+        end
     end
 
     if ball.y + 8 >= paddle.y and ball.y - 8 <= paddle.y + paddle.height then
@@ -72,11 +88,26 @@ function love.draw()
     love.graphics.print("Lives: " .. lives, 10, 50)
     ball:draw()
     paddle:draw()
+
+    if gameState == "gameover" then
+        gameOverScreen:draw()
+    end
 end
 
--- BROWNFIELD: dead code
+function love.mousepressed(x, y, button)
+    if gameState == "gameover" and button == 1 then
+        if gameOverScreen:mousepressed(x, y) then
+            resetGame()
+        end
+    end
+end
+
 function love.keypressed(key)
-    if key == "space" then
+    if gameState == "gameover" then
+        if gameOverScreen:keypressed(key) then
+            resetGame()
+        end
+    elseif key == "space" then
         -- TODO: pause
     end
 end
