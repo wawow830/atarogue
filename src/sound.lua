@@ -1,5 +1,54 @@
 local Sound = {}
 
+local function generatePattern(notes, sampleRate, waveform, volume)
+    -- notes: { {freq, duration}, ... }  -- freq 0 = silence
+    sampleRate = sampleRate or 44100
+    waveform = waveform or "square"
+    volume = volume or 0.15
+
+    local totalSamples = 0
+    local noteSamples = {}
+    for _, note in ipairs(notes) do
+        local samples = math.floor(note[2] * sampleRate)
+        table.insert(noteSamples, samples)
+        totalSamples = totalSamples + samples
+    end
+
+    local data = love.sound.newSoundData(totalSamples, sampleRate, 16, 1)
+    local pos = 0
+
+    for i, note in ipairs(notes) do
+        local freq = note[1]
+        local samples = noteSamples[i]
+        for s = 0, samples - 1 do
+            local amp = 0
+            if freq > 0 then
+                local t = s / sampleRate
+                if waveform == "square" then
+                    local phase = (t * freq) % 1
+                    amp = phase < 0.5 and 1 or -1
+                else
+                    amp = math.sin(t * freq * 2 * math.pi)
+                end
+            end
+
+            local envelope = 1
+            local attack = math.min(500, samples / 8)
+            local release = math.min(500, samples / 8)
+            if s < attack then
+                envelope = s / attack
+            elseif s > samples - release then
+                envelope = (samples - s) / release
+            end
+
+            data:setSample(pos, amp * envelope * volume)
+            pos = pos + 1
+        end
+    end
+
+    return love.audio.newSource(data, "static")
+end
+
 local function generateTone(duration, freq, sampleRate, waveform)
     sampleRate = sampleRate or 44100
     waveform = waveform or "sine"
@@ -59,6 +108,28 @@ function Sound.load()
     Sound.brick = generateTone(0.12, 880, 44100, "square")
     -- Descending tone for game over
     Sound.gameover = generateDescent(0.5, 220, 55, 44100)
+
+    -- Retro background loop: C minor arpeggio (C3, Eb3, G3, Bb3)
+    local musicNotes = {
+        {130.81, 0.40}, {0, 0.15},
+        {155.56, 0.40}, {0, 0.15},
+        {196.00, 0.40}, {0, 0.15},
+        {233.08, 0.40}, {0, 0.15},
+    }
+    Sound.music = generatePattern(musicNotes, 44100, "square", 0.12)
+    Sound.music:setLooping(true)
+end
+
+function Sound.playMusic()
+    if Sound.music and Sound.music:isPlaying() == false then
+        Sound.music:play()
+    end
+end
+
+function Sound.stopMusic()
+    if Sound.music then
+        Sound.music:stop()
+    end
 end
 
 function Sound.playBounce()

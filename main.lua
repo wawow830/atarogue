@@ -7,6 +7,7 @@ function love.load()
     print("Atarogue loaded!")
     math.randomseed(os.time())
     Sound.load()
+    Sound.playMusic()
 
     local screenWidth = love.graphics.getWidth()
     local screenHeight = love.graphics.getHeight()
