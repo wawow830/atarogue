@@ -100,7 +100,10 @@ Rules:
 3. Start services if applicable (boot dev server, run tests).
 4. Write a ticket summary to kb/TICKET_<id>.md when done. Link it from kb/KNOWLEDGE_BASE.md.
 5. Update ~/.rts-workflow-state.json to set your ticket's state to "done" when finished.
-6. When done, report back to your spawner: herdr pane send-text <spawner-pane> "TICKET-<id> done. <summary>"
+6. When done, report back to your spawner:
+   herdr pane send-text <spawner-pane> "TICKET-<id> done. <summary>"
+   herdr pane send-keys <spawner-pane> Enter
+   (send-text puts text in the terminal; send-keys Enter makes pi process it)
 7. When idle, stay silent. Do not broadcast.
 8. If stuck for more than a few minutes, notify via herdr and ask one focused question.
 9. Satisfice. Good enough and shipped beats perfect and stalled.
@@ -125,6 +128,8 @@ Your spawner: <spawner-pane>
    - The worker is **interactive**. It stays alive in the pane. No `--print` flag.
 7. **Send the mission** (if not in the system prompt):
    - `herdr pane send-text <pane-id> "TICKET-<ticket-id>: <mission>"`
+   - `herdr pane send-keys <pane-id> Enter`
+   - **Always press Enter after send-text.** Text in the terminal is invisible to pi until Enter is pressed.
    - Or include the mission in the system prompt file.
 8. **Record the ticket.**
    - Read `~/.rts-workflow-state.json` (create if missing).
@@ -141,7 +146,7 @@ The orchestrator can send messages to workers at any time:
 # Send text to a worker's pane
 herdr pane send-text <pane-id> "Add collision detection too."
 
-# Send a key sequence
+# CRITICAL: Always press Enter after send-text
 herdr pane send-keys <pane-id> Enter
 
 # Read the worker's output
@@ -151,7 +156,7 @@ herdr pane read <pane-id> --source recent --lines 80
 herdr agent focus <pane-id>
 ```
 
-The worker receives the text as user input.
+**Why two commands?** `herdr pane send-text` puts text in the terminal buffer. But pi only reads user input after Enter is pressed. If you skip `send-keys Enter`, the worker never sees your message.
 
 **Workers report back to you.** When a worker finishes, it sends a message to your pane:
 - `"TICKET-001 done. Branch: feat/ball. Summary: implemented ball physics and collision."`
