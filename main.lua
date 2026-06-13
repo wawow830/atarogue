@@ -15,6 +15,7 @@ function love.load()
     -- BROWNFIELD: messy globals, no state table
     score = 0
     lives = 3
+    gameState = "playing"
     -- TODO: powerup system
     -- TODO: brick system
     -- TODO: level progression
@@ -22,6 +23,10 @@ function love.load()
 end
 
 function love.update(dt)
+    if gameState == "gameover" then
+        return
+    end
+
     ball:update(dt)
     paddle:update(dt)
 
@@ -49,12 +54,15 @@ function love.update(dt)
     end
 
     if ball.y - 8 > screenHeight then
-        ball.x = screenWidth / 2
-        ball.y = screenHeight - 60
-        ball.vx = 200
-        ball.vy = -250
         lives = lives - 1
-        -- TODO: game over screen
+        if lives <= 0 then
+            gameState = "gameover"
+        else
+            ball.x = screenWidth / 2
+            ball.y = screenHeight - 60
+            ball.vx = 200
+            ball.vy = -250
+        end
     end
 
     if ball.y + 8 >= paddle.y and ball.y - 8 <= paddle.y + paddle.height then
@@ -72,11 +80,43 @@ function love.draw()
     love.graphics.print("Lives: " .. lives, 10, 50)
     ball:draw()
     paddle:draw()
+
+    if gameState == "gameover" then
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", 0, 0, 800, 600)
+        love.graphics.setColor(1, 1, 1, 1)
+
+        local screenWidth = love.graphics.getWidth()
+        local screenHeight = love.graphics.getHeight()
+
+        local gameOverText = "GAME OVER"
+        local scoreText = "Score: " .. score
+        local restartText = "Press SPACE to restart"
+
+        local gameOverWidth = love.graphics.getFont():getWidth(gameOverText)
+        local scoreWidth = love.graphics.getFont():getWidth(scoreText)
+        local restartWidth = love.graphics.getFont():getWidth(restartText)
+
+        love.graphics.print(gameOverText, screenWidth / 2 - gameOverWidth / 2, screenHeight / 2 - 40)
+        love.graphics.print(scoreText, screenWidth / 2 - scoreWidth / 2, screenHeight / 2)
+        love.graphics.print(restartText, screenWidth / 2 - restartWidth / 2, screenHeight / 2 + 40)
+    end
 end
 
--- BROWNFIELD: dead code
 function love.keypressed(key)
-    if key == "space" then
-        -- TODO: pause
+    if gameState == "gameover" and key == "space" then
+        score = 0
+        lives = 3
+        gameState = "playing"
+
+        local screenWidth = love.graphics.getWidth()
+        local screenHeight = love.graphics.getHeight()
+
+        paddle.x = screenWidth / 2 - 40
+        paddle.y = screenHeight - 40
+        ball.x = screenWidth / 2
+        ball.y = screenHeight - 60
+        ball.vx = 200
+        ball.vy = -250
     end
 end
