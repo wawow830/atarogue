@@ -94,15 +94,25 @@ The system prompt file must be a single text file passed to `--system-prompt @/t
 ### Building the prompt
 
 1. **Read `WORKER.md`** from the skill directory (`.pi/skills/rts-pi/WORKER.md`).
-2. **Append ticket context** at the end:
-   ```
-   ---
-   
-   Your ticket: <ticket-id>
-   Your mission: <mission>
-   Your spawner: <spawner-pane-id>
-   ```
+2. **Append ticket context** at the end.
 3. **Write the combined text** to `/tmp/worker-system-prompt-<ticket-id>.txt`.
+
+Example procedure:
+
+```bash
+# Start from the canonical worker rules
+cat .pi/skills/rts-pi/WORKER.md > /tmp/worker-system-prompt-<ticket-id>.txt
+
+# Append runtime context
+cat >> /tmp/worker-system-prompt-<ticket-id>.txt << 'EOF'
+
+---
+
+Your ticket: <ticket-id>
+Your mission: <mission>
+Your spawner: <spawner-pane-id>
+EOF
+```
 
 This ensures every worker gets:
 - The full inter-agent communication protocol
@@ -110,7 +120,7 @@ This ensures every worker gets:
 - Idle silence requirements
 - All current worker rules
 
-If `WORKER.md` is updated, workers automatically get the new rules on next spawn.
+If `WORKER.md` is updated, workers automatically get the new rules on next spawn. No prompt drift. No copy-paste errors.
 
 ## Spawn procedure
 
