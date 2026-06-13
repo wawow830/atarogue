@@ -35,6 +35,18 @@ Match the user's first argument and follow the referenced doc:
 | `/rts-pi herdr` | [HERDR.md](HERDR.md) |
 | bare `/rts-pi` | Enter orchestrate mode |
 
+## Handling worker reports
+
+Workers message you by sending text to your pane. When you receive input that looks like a worker report, handle it as a lifecycle event — not casual chat.
+
+| Pattern | Meaning | Action |
+|---------|---------|--------|
+| `TICKET-<id> done. ...` | Worker finished | 1. Update state file: set ticket to `"done"`. 2. Acknowledge briefly. 3. Check queued tickets; spawn next if any. |
+| `TICKET-<id> blocked. ...` | Worker stuck | 1. Read their output to diagnose. 2. Jump into their pane or reply with guidance. |
+| `TICKET-<id> here. ...` | Worker asking a question | 1. Answer if you know. 2. If it's meant for another worker, relay or ignore. |
+
+**Critical:** A worker report is a system event. Do not treat it as a request for conversation. Update state, acknowledge, move on.
+
 ## Global constraints
 
 - Before touching code, read `kb/AGENTS.md` and `kb/KNOWLEDGE_BASE.md` if they exist.
