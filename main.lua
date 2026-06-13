@@ -1,9 +1,12 @@
 local Ball = require("src.ball")
 local Paddle = require("src.paddle")
+local Sound = require("src.sound")
 
 function love.load()
     -- Atarogue: a roguelike Atari Breakout
     print("Atarogue loaded!")
+    math.randomseed(os.time())
+    Sound.load()
 
     local screenWidth = love.graphics.getWidth()
     local screenHeight = love.graphics.getHeight()
@@ -38,14 +41,17 @@ function love.update(dt)
     if ball.x - 8 <= 0 then
         ball.x = 8
         ball.vx = math.abs(ball.vx)
+        Sound.playBounce()
     elseif ball.x + 8 >= screenWidth then
         ball.x = screenWidth - 8
         ball.vx = -math.abs(ball.vx)
+        Sound.playBounce()
     end
 
     if ball.y - 8 <= 0 then
         ball.y = 8
         ball.vy = math.abs(ball.vy)
+        Sound.playBounce()
     end
 
     if ball.y - 8 > screenHeight then
@@ -54,6 +60,7 @@ function love.update(dt)
         ball.vx = 200
         ball.vy = -250
         lives = lives - 1
+        Sound.playGameOver()
         -- TODO: game over screen
     end
 
@@ -61,6 +68,7 @@ function love.update(dt)
         if ball.x >= paddle.x and ball.x <= paddle.x + paddle.width then
             ball.y = paddle.y - 8
             ball.vy = -math.abs(ball.vy)
+            Sound.playBounce()
         end
     end
 end
