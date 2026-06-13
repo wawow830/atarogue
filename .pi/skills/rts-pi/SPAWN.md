@@ -51,7 +51,7 @@ pi --name "rts:<ticket-id>" \
    --no-context-files \
    --no-extensions \
    --no-prompt-templates \
-   --system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt
+   --system-prompt @.pi/skills/rts-pi/WORKER.md
 ```
 
 ### Research worker
@@ -60,7 +60,7 @@ pi --name "rts:<ticket-id>" \
    --no-context-files \
    --no-prompt-templates \
    -e <path-to-web-search-extension> \
-   --system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt
+   --system-prompt @.pi/skills/rts-pi/WORKER.md
 ```
 
 If no web search extension is found, use `bash` to run `curl` or `python` for light web scraping, or ask the user to install one.
@@ -71,7 +71,7 @@ pi --name "rts:<ticket-id>" \
    --no-context-files \
    --no-prompt-templates \
    -e <path-to-todo-tracker-extension> \
-   --system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt
+   --system-prompt @.pi/skills/rts-pi/WORKER.md
 ```
 
 ### Custom worker
@@ -85,66 +85,41 @@ Read from `.pi/rts-profiles/<profile>.json` or similar:
 }
 ```
 
-## Worker system prompt file
+## Worker system prompt
 
-The system prompt file must be a single text file passed to `--system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt`. It should contain the worker's rules and constraints.
-
-**Do NOT write a custom prompt.** Use the canonical worker rules from [WORKER.md](WORKER.md).
-
-### Building the prompt
-
-1. **Read `WORKER.md`** from the skill directory (`.pi/skills/rts-pi/WORKER.md`).
-2. **Append ticket context** at the end.
-3. **Write the combined text** to `/tmp/worker-system-prompt-<ticket-id>.txt`.
-
-Example procedure:
+The system prompt is the canonical `WORKER.md` from the skill directory:
 
 ```bash
-# Start from the canonical worker rules
-cat .pi/skills/rts-pi/WORKER.md > /tmp/worker-system-prompt-<ticket-id>.txt
-
-# Append runtime context
-cat >> /tmp/worker-system-prompt-<ticket-id>.txt << 'EOF'
-
----
-
-Your ticket: <ticket-id>
-Your mission: <mission>
-Your spawner: <spawner-pane-id>
-EOF
+--system-prompt @.pi/skills/rts-pi/WORKER.md
 ```
 
-This ensures every worker gets:
-- The full inter-agent communication protocol
-- Spawner reporting rules (with `send-keys Enter`)
-- Idle silence requirements
-- All current worker rules
+This file contains all worker rules: inter-agent communication, idle silence, spawner reporting, Enter-key protocol. No drift. No copy-paste.
 
-If `WORKER.md` is updated, workers automatically get the new rules on next spawn. No prompt drift. No copy-paste errors.
+When `WORKER.md` is updated, every new worker automatically gets the new rules.
 
 ## Spawn procedure
 
 1. **Classify the ticket** using the decision tree above.
 2. **Determine your pane ID.** You are the spawner. Capture it from context or check `herdr agent list`.
 3. **Build the spawn command** with the matching profile.
-4. **Write the system prompt file** to `/tmp/worker-system-prompt-<ticket-id>.txt`.
-   - Include worker rules, mission, and YOUR pane ID as the spawner.
-5. **Create the worktree.**
+4. **Create the worktree.**
    - `herdr worktree create --cwd <repo-root> --branch <branch>`
    - If exists: `herdr worktree open --cwd <repo-root> --branch <branch>`
-6. **Spawn the worker.**
+5. **Spawn the worker.**
    - `herdr pane run --cwd <worktree-root> "<built-pi-command>"`
    - The worker is **interactive**. It stays alive in the pane. No `--print` flag.
-7. **Send the mission** (if not in the system prompt):
-   - `herdr pane send-text <pane-id> "TICKET-<ticket-id>: <mission>"`
-   - `herdr pane send-keys <pane-id> Enter`
-   - **Always press Enter after send-text.** Text in the terminal is invisible to pi until Enter is pressed.
-   - Or include the mission in the system prompt file.
-8. **Record the ticket.**
+6. **Send the mission as a user message.** The worker's system prompt is `WORKER.md` (rules only). The actual ticket, mission, and spawner details arrive as a normal user message:
+   ```bash
+   herdr pane send-text <pane-id> "TICKET-<ticket-id>: <mission>" && \
+   herdr pane send-text <pane-id> "Your spawner: <your-pane-id>" && \
+   herdr pane send-keys <pane-id> Enter
+   ```
+   **Always press Enter after send-text.** Text in the terminal is invisible to pi until Enter is pressed.
+7. **Record the ticket.**
    - Read `~/.rts-workflow-state.json` (create if missing).
    - Append `{ id, branch, worktree, profile, spawner_pane: "<your-pane>", state: "working", created_at: <now>, updated_at: <now> }`.
    - Write atomically.
-9. **Report back.**
+8. **Report back.**
    - Branch, worktree path, profile used, pane id if known.
 
 ## Communicating with workers
@@ -180,5 +155,5 @@ Listen for these messages. They are your signal that a worker is complete.
 - Do not ask the user clarifying questions during the worker mission; bake assumptions into the prompt.
 - Do not load the orchestrator's soul or extensions onto workers.
 - Do not auto-discover all global extensions. Only load what the profile explicitly requires.
-- Do not pass multiple files to `-p`. Build a single prompt file.
+- Do not write a custom system prompt. Use `@.pi/skills/rts-pi/WORKER.md` directly.
 - Do not broadcast team info to all workers. Workers stay idle and silent until directly messaged.
