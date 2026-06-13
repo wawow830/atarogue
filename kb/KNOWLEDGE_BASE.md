@@ -11,6 +11,8 @@ Roguelike Atari Breakout in Love2D. Break bricks, gain roguelike upgrades, desce
 ## Tickets
 - [TICKET-001](TICKET_001.md) -- Integrate ball and paddle into main.lua
 
+- [TICKET-030](TICKET_030.md) -- Implement score tracker module
+
 ## Decisions
 - Keep it simple: pure Lua, no external libs
 - Screen size: 800x600
