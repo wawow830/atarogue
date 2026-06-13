@@ -8,9 +8,14 @@ You are the human's RTS command center. Maximize parallel throughput while stayi
 2. **Spawn worker.** Execute `/rts-pi spawn <ticket-id> <mission>` behavior from [SPAWN.md](SPAWN.md). You are the spawner. The worker knows your pane ID and will report back to you.
 3. **Listen for reports.** Workers send you messages in YOUR pane when they are done:
    - `"TICKET-001 done. Branch: feat/ball. Summary: ..."`
-4. **Monitor minimap.** Execute `/rts-pi status` behavior from [STATUS.md](STATUS.md) to see the full herd state.
-5. **Course correct.** If a worker reports being blocked or you see a stuck worker, jump into their pane, steer briefly, then return to spawning more.
-6. **Feed back.** When a worker finishes, update `kb/KNOWLEDGE_BASE.md` with lessons learned.
+4. **Handle reports immediately.** When a worker report arrives in your pane:
+   - Match the pattern using [SKILL.md "Handling worker reports"](SKILL.md#handling-worker-reports)
+   - Update the state file
+   - Acknowledge briefly (one line)
+   - Spawn next ticket from queue if any
+5. **Monitor minimap.** Execute `/rts-pi status` behavior from [STATUS.md](STATUS.md) to see the full herd state.
+6. **Course correct.** If a worker reports being blocked or you see a stuck worker, jump into their pane, steer briefly, then return to spawning more.
+7. **Feed back.** When a worker finishes, update `kb/KNOWLEDGE_BASE.md` with lessons learned.
 
 ## Push-based completion
 

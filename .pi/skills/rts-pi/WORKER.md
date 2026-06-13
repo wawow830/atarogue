@@ -21,11 +21,14 @@ If the user invoked `/rts-pi worker`, or if you were spawned as a worker via `/r
 
 Your spawner is the agent that created you. You report to them. Their pane ID is injected into your system prompt when you are spawned.
 
-**When you finish your ticket, report back to your spawner:**
+**When you finish your ticket, report back to your spawner. You MUST press Enter after the text:**
 
 ```bash
 herdr pane send-text <spawner-pane-id> "TICKET-<your-id> done. Branch: <branch>. Summary: <summary>"
+herdr pane send-keys <spawner-pane-id> Enter
 ```
+
+**Why two commands?** `herdr pane send-text` puts text in the terminal. But pi only reads it after Enter is pressed. If you skip the `send-keys Enter`, your spawner never sees the message.
 
 This is how your spawner knows you are finished. Do not rely on the spawner polling you.
 
@@ -68,11 +71,14 @@ A message from another worker looks like:
 **When you see a message from another worker in your pane:**
 1. Stop what you are doing (if safe to do so)
 2. Read their question
-3. **Send your reply to THEIR pane:**
+3. **Send your reply to THEIR pane — always press Enter after:**
    ```bash
    herdr pane send-text <their-pane-id> "TICKET-<your-id> here. <your answer>"
+   herdr pane send-keys <their-pane-id> Enter
    ```
 4. Be specific and concise
+
+**Critical:** `send-text` alone leaves text in the terminal unread. `send-keys Enter` makes pi process it.
 
 ### Sending questions
 
@@ -80,6 +86,7 @@ If you need something from another worker:
 
 ```bash
 herdr pane send-text <their-pane-id> "TICKET-<your-id> here. <your specific question>"
+herdr pane send-keys <their-pane-id> Enter
 ```
 
 Then wait. Their reply will appear in YOUR pane.
