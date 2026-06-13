@@ -1,5 +1,6 @@
 local Ball = require("src.ball")
 local Paddle = require("src.paddle")
+local ParticleSystem = require("src.particle")
 
 function love.load()
     -- Atarogue: a roguelike Atari Breakout
@@ -15,6 +16,7 @@ function love.load()
     -- BROWNFIELD: messy globals, no state table
     score = 0
     lives = 3
+    particles = ParticleSystem.new()
     -- TODO: powerup system
     -- TODO: brick system
     -- TODO: level progression
@@ -38,14 +40,17 @@ function love.update(dt)
     if ball.x - 8 <= 0 then
         ball.x = 8
         ball.vx = math.abs(ball.vx)
+        particles:emit(ball.x, ball.y, 5, {0.8, 0.8, 1, 1})
     elseif ball.x + 8 >= screenWidth then
         ball.x = screenWidth - 8
         ball.vx = -math.abs(ball.vx)
+        particles:emit(ball.x, ball.y, 5, {0.8, 0.8, 1, 1})
     end
 
     if ball.y - 8 <= 0 then
         ball.y = 8
         ball.vy = math.abs(ball.vy)
+        particles:emit(ball.x, ball.y, 5, {1, 1, 0.8, 1})
     end
 
     if ball.y - 8 > screenHeight then
@@ -54,6 +59,7 @@ function love.update(dt)
         ball.vx = 200
         ball.vy = -250
         lives = lives - 1
+        particles:emit(screenWidth / 2, screenHeight, 20, {1, 0.2, 0.2, 1})
         -- TODO: game over screen
     end
 
@@ -61,8 +67,11 @@ function love.update(dt)
         if ball.x >= paddle.x and ball.x <= paddle.x + paddle.width then
             ball.y = paddle.y - 8
             ball.vy = -math.abs(ball.vy)
+            particles:emit(ball.x, ball.y + 4, 12, {1, 0.8, 0.3, 1})
         end
     end
+
+    particles:update(dt)
 end
 
 function love.draw()
@@ -72,6 +81,7 @@ function love.draw()
     love.graphics.print("Lives: " .. lives, 10, 50)
     ball:draw()
     paddle:draw()
+    particles:draw()
 end
 
 -- BROWNFIELD: dead code
