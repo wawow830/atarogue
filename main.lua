@@ -1,5 +1,6 @@
 local Ball = require("src.ball")
 local Paddle = require("src.paddle")
+local PowerUp = require("src.powerup")
 
 function love.load()
     -- Atarogue: a roguelike Atari Breakout
@@ -15,7 +16,10 @@ function love.load()
     -- BROWNFIELD: messy globals, no state table
     score = 0
     lives = 3
-    -- TODO: powerup system
+    paddleHits = 0
+    powerups = {}
+    activeEffects = {}
+    math.randomseed(os.time())
     -- TODO: brick system
     -- TODO: level progression
     -- FIXME: collision is hacky
@@ -59,10 +63,52 @@ function love.update(dt)
 
     if ball.y + 8 >= paddle.y and ball.y - 8 <= paddle.y + paddle.height then
         if ball.x >= paddle.x and ball.x <= paddle.x + paddle.width then
+            if ball.vy > 0 then
+                paddleHits = paddleHits + 1
+                if paddleHits % 5 == 0 then
+                    spawnPowerUp()
+                end
+            end
             ball.y = paddle.y - 8
             ball.vy = -math.abs(ball.vy)
         end
     end
+
+    -- Update power-ups
+    for i = #powerups, 1, -1 do
+        local powerup = powerups[i]
+        powerup:update(dt)
+        if powerup:collect(paddle, ball) then
+            local revert, duration = PowerUp.applyEffect(powerup.type, paddle, ball)
+            if revert then
+                table.insert(activeEffects, {
+                    revert = revert,
+                    endTime = love.timer.getTime() + duration
+                })
+            end
+            powerup.active = false
+        end
+        if not powerup.active or powerup.y > screenHeight then
+            table.remove(powerups, i)
+        end
+    end
+
+    -- Update active effects
+    for i = #activeEffects, 1, -1 do
+        if love.timer.getTime() >= activeEffects[i].endTime then
+            activeEffects[i].revert()
+            table.remove(activeEffects, i)
+        end
+    end
+end
+
+function spawnPowerUp()
+    local screenWidth = love.graphics.getWidth()
+    local types = PowerUp.types
+    local typeStr = types[math.random(1, #types)]
+    local x = math.random(0, screenWidth - 24)
+    local powerup = PowerUp.new(typeStr, x, -24)
+    table.insert(powerups, powerup)
 end
 
 function love.draw()
@@ -72,6 +118,9 @@ function love.draw()
     love.graphics.print("Lives: " .. lives, 10, 50)
     ball:draw()
     paddle:draw()
+    for _, powerup in ipairs(powerups) do
+        powerup:draw()
+    end
 end
 
 -- BROWNFIELD: dead code
