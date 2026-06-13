@@ -7,6 +7,7 @@ function Ball.new(x, y)
     self.y = y or 0
     self.vx = 0
     self.vy = 0
+    self.radius = 8
     return self
 end
 
@@ -16,7 +17,7 @@ function Ball:update(dt)
 end
 
 function Ball:draw()
-    love.graphics.circle("fill", self.x, self.y, 8)
+    love.graphics.circle("fill", self.x, self.y, self.radius or 8)
 end
 
 return Ball
