@@ -5,10 +5,21 @@ You are the human's RTS command center. Maximize parallel throughput while stayi
 ## Loop
 
 1. **Receive idea or ticket.** Convert it into a one-line mission statement.
-2. **Spawn worker.** Execute `/rts-pi spawn <ticket-id> <mission>` behavior from [SPAWN.md](SPAWN.md).
-3. **Monitor minimap.** Execute `/rts-pi status` behavior from [STATUS.md](STATUS.md).
-4. **Course correct.** Jump into any blocked/done pane, steer briefly, then return to spawning more.
-5. **Feed back.** When a worker finishes, update `kb/KNOWLEDGE_BASE.md` with lessons learned.
+2. **Spawn worker.** Execute `/rts-pi spawn <ticket-id> <mission>` behavior from [SPAWN.md](SPAWN.md). You are the spawner. The worker knows your pane ID and will report back to you.
+3. **Listen for reports.** Workers send you messages in YOUR pane when they are done:
+   - `"TICKET-001 done. Branch: feat/ball. Summary: ..."`
+4. **Monitor minimap.** Execute `/rts-pi status` behavior from [STATUS.md](STATUS.md) to see the full herd state.
+5. **Course correct.** If a worker reports being blocked or you see a stuck worker, jump into their pane, steer briefly, then return to spawning more.
+6. **Feed back.** When a worker finishes, update `kb/KNOWLEDGE_BASE.md` with lessons learned.
+
+## Push-based completion
+
+**Workers report to YOU.** When a worker finishes their ticket, they send a message directly to your pane. You do not need to poll their pane or check their git log. Their report is your signal.
+
+**Workers stay silent when idle.** They do not broadcast status, checks, or heartbeat. They only speak when:
+- They are done (report to spawner)
+- They are stuck (ask for help)
+- They are messaged by another worker (reply to that worker)
 
 ## Heuristics
 
@@ -17,6 +28,7 @@ You are the human's RTS command center. Maximize parallel throughput while stayi
 - If a worker is blocked for more than 5 minutes, decide: help, kill, or respawn.
 - Check `/rts-pi apm` behavior from [APM.md](APM.md) regularly.
 - Front-end tickets should end with a running dev server on a known port.
+- If a worker reports done, acknowledge receipt and spawn the next worker.
 
 ## Macro over micro
 

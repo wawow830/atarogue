@@ -8,6 +8,7 @@ You are invoked with `/rts-pi spawn <ticket-id> <mission>`. Spawn a new autonomo
 - [ ] Verify the current directory is a git repo root. If not, `cd` to the repo root first.
 - [ ] Ensure `kb/AGENTS.md` exists. If not, offer to create it from a sensible template.
 - [ ] **Discover available extensions.** Read `.pi/extensions/` or `.pi/skills/` if present. Also check `~/.pi/agent/extensions/` for globally available tools. Build a list of candidate extensions that workers might need.
+- [ ] **Capture your pane ID.** You are the spawner. The worker needs to know your pane ID so it can report back when done. Determine your own pane ID from context, herdr agent list, or the user's message.
 
 ## Discovering capabilities
 
@@ -30,10 +31,10 @@ Based on the mission, classify the worker profile:
 
 | Profile | When to use | Flags |
 |---------|-------------|-------|
-| **default** | Quick fix, refactor, test, local-only work | `--no-session --no-context-files --no-extensions --no-skills --no-prompt-templates` |
-| **research** | Needs docs, new dependency, external API, current web info | `--no-session --no-context-files --no-skills --no-prompt-templates` + load web search extension if available |
-| **complex** | Multi-file, multi-step, unknown scope | `--no-session --no-context-files --no-prompt-templates` + load todo tracker if available |
-| **custom** | Specific project needs (DB, deploy, specific tools) | `--no-session --no-context-files` + load explicitly named extensions |
+| **default** | Quick fix, refactor, test, local-only work | `--no-context-files --no-extensions --no-prompt-templates` |
+| **research** | Needs docs, new dependency, external API, current web info | `--no-context-files --no-prompt-templates` + load web search extension if available |
+| **complex** | Multi-file, multi-step, unknown scope | `--no-context-files --no-prompt-templates` + load todo tracker if available |
+| **custom** | Specific project needs (DB, deploy, specific tools) | `--no-context-files` + load explicitly named extensions |
 
 ## Decision tree
 
@@ -46,33 +47,31 @@ Based on the mission, classify the worker profile:
 
 ### Default worker
 ```bash
-pi --no-session \
+pi --name "rts:<ticket-id>" \
    --no-context-files \
    --no-extensions \
-   --no-skills \
    --no-prompt-templates \
-   -p @/tmp/worker-prompt-<ticket-id>.txt
+   --system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt
 ```
 
 ### Research worker
 ```bash
-pi --no-session \
+pi --name "rts:<ticket-id>" \
    --no-context-files \
-   --no-skills \
    --no-prompt-templates \
    -e <path-to-web-search-extension> \
-   -p @/tmp/worker-prompt-<ticket-id>.txt
+   --system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt
 ```
 
 If no web search extension is found, use `bash` to run `curl` or `python` for light web scraping, or ask the user to install one.
 
 ### Complex worker
 ```bash
-pi --no-session \
+pi --name "rts:<ticket-id>" \
    --no-context-files \
    --no-prompt-templates \
    -e <path-to-todo-tracker-extension> \
-   -p @/tmp/worker-prompt-<ticket-id>.txt
+   --system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt
 ```
 
 ### Custom worker
@@ -82,53 +81,90 @@ Read from `.pi/rts-profiles/<profile>.json` or similar:
   "name": "db-worker",
   "extensions": ["./.pi/extensions/db-query.ts"],
   "tools": ["read", "bash", "edit", "write", "db_query"],
-  "flags": "--no-session --no-context-files --no-skills --no-prompt-templates"
+  "flags": "--no-context-files --no-prompt-templates"
 }
 ```
 
-## Worker prompt file
+## Worker system prompt file
 
-The worker prompt file must be a single text file passed to `-p @/tmp/worker-prompt-<ticket-id>.txt`. It should contain:
+The system prompt file must be a single text file passed to `--system-prompt @/tmp/worker-system-prompt-<ticket-id>.txt`. It should contain the worker's rules and constraints.
 
-1. **Worker rules** from [WORKER.md](WORKER.md)
-2. **Knowledge base** — read `kb/AGENTS.md` and `kb/KNOWLEDGE_BASE.md` and embed their contents inline
-3. **Mission** — the one-line mission description
-
-Example structure:
+Example:
 
 ```
---- WORKER RULES ---
-(your rules here)
+You are a parallel autonomous worker on a git worktree. Your job: take this ticket all the way to PR with minimal human interruption.
 
---- KNOWLEDGE BASE ---
-(project conventions here)
+Rules:
+1. Read kb/AGENTS.md and kb/KNOWLEDGE_BASE.md before touching code.
+2. Implement, test, commit, push, and open a pull request.
+3. Start services if applicable (boot dev server, run tests).
+4. Write a ticket summary to kb/TICKET_<id>.md when done. Link it from kb/KNOWLEDGE_BASE.md.
+5. Update ~/.rts-workflow-state.json to set your ticket's state to "done" when finished.
+6. When done, report back to your spawner: herdr pane send-text <spawner-pane> "TICKET-<id> done. <summary>"
+7. When idle, stay silent. Do not broadcast.
+8. If stuck for more than a few minutes, notify via herdr and ask one focused question.
+9. Satisfice. Good enough and shipped beats perfect and stalled.
 
---- MISSION ---
-Integrate ball and paddle into main.lua
+Your ticket: <ticket-id>
+Your mission: <mission>
+Your spawner: <spawner-pane>
 ```
 
 ## Spawn procedure
 
 1. **Classify the ticket** using the decision tree above.
-2. **Build the spawn command** with the matching profile.
-3. **Write the worker prompt file** to `/tmp/worker-prompt-<ticket-id>.txt`.
-   - Include worker rules, knowledge base content, and mission.
-4. **Create the worktree.**
+2. **Determine your pane ID.** You are the spawner. Capture it from context or check `herdr agent list`.
+3. **Build the spawn command** with the matching profile.
+4. **Write the system prompt file** to `/tmp/worker-system-prompt-<ticket-id>.txt`.
+   - Include worker rules, mission, and YOUR pane ID as the spawner.
+5. **Create the worktree.**
    - `herdr worktree create --cwd <repo-root> --branch <branch>`
    - If exists: `herdr worktree open --cwd <repo-root> --branch <branch>`
-5. **Spawn the worker.**
+6. **Spawn the worker.**
    - `herdr pane run --cwd <worktree-root> "<built-pi-command>"`
-6. **Record the ticket.**
+   - The worker is **interactive**. It stays alive in the pane. No `--print` flag.
+7. **Send the mission** (if not in the system prompt):
+   - `herdr pane send-text <pane-id> "TICKET-<ticket-id>: <mission>"`
+   - Or include the mission in the system prompt file.
+8. **Record the ticket.**
    - Read `~/.rts-workflow-state.json` (create if missing).
-   - Append `{ id, branch, worktree, profile, state: "working", created_at: <now>, updated_at: <now> }`.
+   - Append `{ id, branch, worktree, profile, spawner_pane: "<your-pane>", state: "working", created_at: <now>, updated_at: <now> }`.
    - Write atomically.
-7. **Report back.**
+9. **Report back.**
    - Branch, worktree path, profile used, pane id if known.
+
+## Communicating with workers
+
+The orchestrator can send messages to workers at any time:
+
+```bash
+# Send text to a worker's pane
+herdr pane send-text <pane-id> "Add collision detection too."
+
+# Send a key sequence
+herdr pane send-keys <pane-id> Enter
+
+# Read the worker's output
+herdr pane read <pane-id> --source recent --lines 80
+
+# Focus on the worker
+herdr agent focus <pane-id>
+```
+
+The worker receives the text as user input.
+
+**Workers report back to you.** When a worker finishes, it sends a message to your pane:
+- `"TICKET-001 done. Branch: feat/ball. Summary: implemented ball physics and collision."`
+
+Listen for these messages. They are your signal that a worker is complete.
 
 ## Anti-patterns
 
+- Do not use `--print` or `-p`. Workers must stay alive and interactive.
+- Do not use `--no-session`. Workers must persist so they can receive messages.
 - Do not spawn inside the main repo checkout.
 - Do not ask the user clarifying questions during the worker mission; bake assumptions into the prompt.
 - Do not load the orchestrator's soul or extensions onto workers.
 - Do not auto-discover all global extensions. Only load what the profile explicitly requires.
 - Do not pass multiple files to `-p`. Build a single prompt file.
+- Do not broadcast team info to all workers. Workers stay idle and silent until directly messaged.
