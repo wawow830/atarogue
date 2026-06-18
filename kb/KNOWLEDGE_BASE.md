@@ -10,7 +10,9 @@ Roguelike Atari Breakout in Love2D. Break bricks, gain roguelike upgrades, desce
 
 ## Tickets
 - [TICKET-001](TICKET_001.md) -- Integrate ball and paddle into main.lua
+- [TICKET-011](TICKET_011.md) -- Health system with hearts and damage
 
 ## Decisions
 - Keep it simple: pure Lua, no external libs
 - Screen size: 800x600
+- Player health is tracked by `src/health.lua` and rendered as hearts in the HUD.
